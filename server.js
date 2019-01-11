@@ -185,7 +185,7 @@ io.on('connection', function(socket)
 					//console.log(groupMembers);
 					for (var a = 0; a < groupMembers.length; a++)
 					{
-						if (groupMembers[a] != undefined && groupMembers[a].user_id != user.UserId)
+						if (groupMembers[a] != undefined && groupMembers[a].user_id != user.UserId && groupMembers[a].user_id != 18878236)
 						{
 							var member = {};
 							member.Name = groupMembers[a].nickname || groupMembers[a].name || "Nil";
@@ -196,7 +196,6 @@ io.on('connection', function(socket)
 					groups.push(group);
 				}
 				user.groups = groups;
-				//console.log(user.groups);
 			}
 			commands.getDMs(data.token, function(resp)
 			{
