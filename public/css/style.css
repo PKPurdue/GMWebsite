@@ -1,0 +1,44 @@
+:root {
+	--background-color: #AAAAAA; /*85B9D6;*/
+}
+
+body {
+	background-color: var(--background-color);
+	text-align: center;
+}
+
+#accessTokenFrame {
+	position: relative;
+	height: 85vh;
+	top: 12.5%;
+}
+
+#tokenCenterDiv {
+	margin: 0;
+	position: absolute;
+	top: 45%;
+	left: 50%;
+	-ms-transform: translateY(-50%);
+	-ms-transform: translateX(-50%);
+	transform: translateY(-50%);
+	transform: translateX(-50%);
+}
+
+#groupFrame {
+	position: relative;
+	width: 50%;
+	!height: 50%;
+	left: 25%;
+	top: 25%;
+	background-color: #DDD;
+	border-radius: 5px;
+	padding: 10px;
+}
+
+.input-group {
+	margin: 0px;
+}
+
+.input-group-text {
+	color: #FFF !important;
+}
