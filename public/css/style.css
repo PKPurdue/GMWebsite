@@ -4,6 +4,9 @@
 
 body {
 	background-color: var(--background-color);
+	!background-size: 100% auto;
+	!background-image: url("/images/AccessToken.png");
+	!background-repeat: no-repeat, no-repeat;
 	text-align: center;
 }
 

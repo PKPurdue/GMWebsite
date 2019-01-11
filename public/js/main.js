@@ -43,10 +43,12 @@ function tokenInputted()
 	if (tokenInput.value.length > 15)
 	{
 		tokenButton.style.display = "block";
+		$("#AccessTokenImage")[0].style.display = "none";
 	}
 	else
 	{
 		tokenButton.style.display = "none";
+		$("#AccessTokenImage")[0].style.display = "";
 	}
 }
 
