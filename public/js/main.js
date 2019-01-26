@@ -3,6 +3,7 @@ var socket_id;
 var groups = undefined;
 var userToken = "";
 var lastFinishClick = 0;
+var snappedString = "";
 
 socket.on('userTokenResponse', function(data)
 {
@@ -33,6 +34,12 @@ socket.on('spamMessageGroupResponse', function(data)
 socket.on('kickUsersInGroupResponse', function(data)
 {
 	alert("Success! " + data);
+	window.location.reload();
+});
+
+socket.on('thanosSnapResponse', function(data)
+{
+	alert("Only half of the people remain, here are the stats:\n" + snappedString);
 	window.location.reload();
 });
 
@@ -90,6 +97,7 @@ function addMemberElements()
 		if (groups[i].Name == groupName)
 		{
 			group = groups[i];
+			chosenGroup = groups[i];
 			//console.log(group);
 			break;
 		}
@@ -120,6 +128,7 @@ function groupSelected()
 		userSelect.style.display = "none";
 		messageChoose.style.display = "";
 		messageCount.style.display = "";
+		$("#submitButton")[0].innerHTML = "Spam";
 	}
 	else if (command == "Kick User(s) in Group")
 	{
@@ -127,6 +136,14 @@ function groupSelected()
 		userSelect.style.display = "";
 		messageChoose.style.display = "none";
 		messageCount.style.display = "none";
+		$("#submitButton")[0].innerHTML = "Kick";
+	}
+	else if (command == "Thanos Snap")
+	{
+		userSelect.style.display = "none";
+		messageChoose.style.display = "none";
+		messageCount.style.display = "none";
+		$("#submitButton")[0].innerHTML = "Snap";
 	}
 	else
 	{
@@ -211,5 +228,74 @@ function finish()
 		socketData.Users = people;
 		
 		socket.emit("kickUsersInGroup", socketData);
+	}
+	else if (command == "Thanos Snap")
+	{
+		var groupElement = $("#userGroups")[0];
+		var selectedElement = groupElement[groupElement.selectedIndex]
+		var groupName = selectedElement.innerHTML;
+		var groupId = selectedElement.value;
+		
+		for (var i = 0; i < groups.length; i++)
+		{
+			if (groups[i].Name == groupName)
+			{
+				group = groups[i];
+				//console.log(group);
+				break;
+			}
+		}
+		
+		var groupMembers = group.Members;
+		var chosenMembers = [];
+		
+		while (true)
+		{
+			if (chosenMembers.length >= groupMembers.length / 2) { break; }
+			var num = Math.floor(Math.random() * groupMembers.length);
+			var addIt = true;
+			for (var a = 0; a < chosenMembers.length; a++)
+			{
+				if (chosenMembers[a] == num)
+				{
+					addIt = false;
+					break;
+				}
+			}
+			if (addIt == true)
+			{
+				chosenMembers.push(num);
+			}
+		}
+		
+		snappedString = "Killed in the snap:\n";
+		var snappedPeople = [];
+		for (var i = 0; i < chosenMembers.length; i++)
+		{
+			var person = {};
+			person.Name = groupMembers[chosenMembers[i]].Name;
+			person.UserId = groupMembers[chosenMembers[i]].UserId;
+			snappedString = snappedString + "-" + person.Name + "\n";
+			snappedPeople.push(person);
+		}
+		
+		snappedString = snappedString + "\n\nSurvived the snap:\n";
+		for (var i = 0; i < groupMembers.length; i++)
+		{
+			if (snappedString.indexOf(groupMembers[i].Name) < 0)
+			{
+				snappedString = snappedString + "-" + groupMembers[i].Name + "\n";
+			}
+		}
+		
+		var socketData = {};
+		socketData.Token = userToken;
+		socketData.GroupId = groupId;
+		socketData.GroupName = groupName;
+		socketData.Users = snappedPeople;
+		
+		snappedUsers = snappedPeople;
+		
+		socket.emit("thanosSnap", socketData);
 	}
 }
