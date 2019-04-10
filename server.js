@@ -5,25 +5,7 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server);
 var port = process.env.PORT || 32483;
 
-var users = [];
-/*
-	[socket] = {
-		UserToken: userToken,
-		Groups: groups
-		UserId: userIdInGroupMe
-	}
-	
-	[group] = {
-		Name: groupName,
-		Id: groupId,
-		Members: members
-	}
-	
-	[member] = {
-		Name: memberName,
-		UserId: memberId
-	}
-*/
+var sockets = [];
 
 app.use(express.static('public'));
 app.get('/', function(req, res)
@@ -38,14 +20,14 @@ server.listen(port, function()
 
 
 var beginningLink = "https://api.groupme.com/v3";
-
 var commands = [];
+
 commands.getMyUserId = function(token, callback)
 {
 	request.get(beginningLink + "/users/me?token=" + token, function(err, response, data)
 	{
 		var newData = JSON.parse(JSON.parse(JSON.stringify(data)));
-		//console.log(JSON.stringify(newData));
+		console.log(JSON.stringify(newData.response));
 		callback(newData.response); //newData);
 	});
 }
@@ -55,8 +37,7 @@ commands.getBots = function(token, callback)
 	request.get(beginningLink + "/bots?token=" + token, function(err, response, data)
 	{
 		var newData = JSON.parse(JSON.parse(JSON.stringify(data)));
-		//console.log(JSON.stringify(newData));
-		callback(newData.response); //newData);
+		callback(newData.response);
 	});
 }
 
@@ -92,21 +73,51 @@ commands.createBot = function(botData, callback)
 	});
 }
 
-commands.getGroups = function(token, pageNum, callback)
+commands.getGroups = function(token, pageNum, groupArray, callback)
 {
-	request.get(beginningLink + "/groups?token=" + token, {page: pageNum, per_page: 40}, function(err, response, data)
+	var reqLength = 100;
+	console.log("Page Number: " + pageNum);
+	request.get(beginningLink + "/groups?token=" + token, {page: pageNum, per_page: reqLength}, function(err, response, data)
 	{
 		var newData = JSON.parse(JSON.parse(JSON.stringify(data)));
-		callback(newData.response);
+		
+		for (var i = 0; i < newData.response.length; i++)
+		{
+			groupArray.push(newData.response[i]);
+			//console.log(newData.response[i].name);
+		}
+		
+		if (newData.response.length >= reqLength)
+		{
+			commands.getGroups(token, pageNum + 1, groupArray, callback);
+		}
+		else
+		{
+			callback(groupArray);
+		}
 	});
 }
 
-commands.getDMs = function(token, callback)
+commands.getDMs = function(token, pageNum, groupArray, callback)
 {
-	request.get(beginningLink + "/chats?token=" + token, {page: 1, per_page: 40}, function(err, response, data)
+	var reqLength = 10;
+	request.get(beginningLink + "/chats?token=" + token, {page: pageNum, per_page: reqLength}, function(err, response, data)
 	{
 		var newData = JSON.parse(JSON.parse(JSON.stringify(data)));
-		callback(newData.response);
+		
+		for (var i = 0; i < newData.response.length; i++)
+		{
+			groupArray.push(newData.response[i]);
+		}
+		
+		if (newData.response.length >= reqLength)
+		{
+			commands.getGroups(token, pageNum + 1, groupArray, callback);
+		}
+		else
+		{
+			callback(groupArray);	
+		}
 	});
 }
 
@@ -287,37 +298,59 @@ commands.thanosSnap = function(spamData, callback)
 	});
 }
 
+/*
+	[socket] = {
+		UserToken: userToken,
+		Groups: groups
+		UserId: userIdInGroupMe
+	}
+	
+	[group] = {
+		Name: groupName,
+		Id: groupId,
+		Members: members
+	}
+	
+	[member] = {
+		Name: memberName,
+		UserId: memberId
+	}
+*/
+
+
+
 
 io.on('connection', function(socket)
 {
 	console.log('a user connected');
-	socket.id = Math.random();
 	
-	users[socket.id] = [];
-	var user = users[socket.id];
+	sockets[socket] = {};
 	socket.on('disconnect', function()
 	{
-		delete[users[socket.id]];
+		delete[sockets[socket]];
 	});
 	
 	socket.on('userToken', function(data)
 	{
-		user.UserToken = data.token;
+		socket.UserToken = data.token;
+		var tempGroupArray = [];
 		
 		commands.getMyUserId(data.token, function(resp)
 		{
-			user.UserId = resp.user_id;
+			if (resp == null || resp == undefined) { return; }
+			socket.UserId = resp.user_id;
+			socket.emit("personName", resp);
 		});
 		
-		commands.getGroups(data.token, 1, function(resp)
+		commands.getGroups(data.token, 1, tempGroupArray, function(resp)
 		{
 			if (resp != undefined && resp.length > 0)
 			{
-				if (user.groups != undefined && user.groups.length > 0)
+				if (socket.groups != undefined && socket.groups.length > 0)
 				{
-					for (var i = user.groups.length - 1; i > -1; i--)
+					for (var i = socket.groups.length - 1; i > -1; i--)
 					{
-						delete[user.groups[i]];
+						delete[socket.groups[i]];
 					}
 				}
 				var groups = [];
@@ -333,7 +366,7 @@ io.on('connection', function(socket)
 					//console.log(groupMembers);
 					for (var a = 0; a < groupMembers.length; a++)
 					{
-						if (groupMembers[a] != undefined && groupMembers[a].user_id != user.UserId && groupMembers[a].user_id != 18878236)
+						if (groupMembers[a] != undefined && groupMembers[a].user_id != socket.UserId && groupMembers[a].user_id != 18878236)
 						{
 							var member = {};
 							member.Name = groupMembers[a].nickname || groupMembers[a].name || "Nil";
@@ -343,24 +376,27 @@ io.on('connection', function(socket)
 					}
 					groups.push(group);
 				}
-				user.groups = groups;
+				socket.groups = groups;
 			}
-			commands.getDMs(data.token, function(resp)
+			commands.getDMs(data.token, 1, [], function(resp)
 			{
-				if (resp != undefined && resp.length > 0)
+				/*if (resp != undefined && resp.length > 0)
 				{
-					if (user.groups == undefined) { user.groups = []; }
+					if (socket.groups == undefined) { socket.groups = []; }
 					for (var i = 0; i < resp.length; i++)
 					{
-						var group = {};
-						group.ClassName = "DM";
-						group.Name = resp[i].other_user.name;
-						group.UserId = resp[i].other_user.id;
-						user.groups.push(group);
+						if (resp[i].other_user && resp[i].other_user.name)
+						{
+							var group = {};
+							group.ClassName = "DM";
+							group.Name = resp[i].other_user.name;
+							group.UserId = resp[i].other_user.id;
+							socket.groups.push(group);
+						}
 					}
 					//console.log(user.groups);
-				}
-				socket.emit('userTokenResponse', user.groups);
+				}*/
+				socket.emit('userTokenResponse', socket.groups);
 			});
 		});
 	});

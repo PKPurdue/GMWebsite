@@ -25,6 +25,12 @@ socket.on('userTokenResponse', function(data)
 	$("#groupFrame")[0].style.display = "block";
 });
 
+socket.on('personName', function(data)
+{
+	$("#hello-message")[0].innerHTML = (data.name != undefined && "Hello, " + data.name) || "ERROR: Could not load name.";
+	$("#hello-message")[0].style.display = "inline-block";
+});
+
 socket.on('spamMessageGroupResponse', function(data)
 {
 	alert("Success! " + data);
@@ -39,8 +45,19 @@ socket.on('kickUsersInGroupResponse', function(data)
 
 socket.on('thanosSnapResponse', function(data)
 {
-	alert("Only half of the people remain, here are the stats:\n" + snappedString);
-	window.location.reload();
+	var screen = $("#blockScreen")[0];
+	var ii = 1;
+	var aaa = setInterval(function()
+	{
+		screen.style.opacity = ii;
+		ii = ii - .01;
+		if (ii <= 0)
+		{
+			alert("Only half of the people remain, here are the stats:\n" + snappedString);
+			window.location.reload();
+			window.clearInterval(aaa);
+		}
+	}, 25);
 });
 
 function tokenInputted()
@@ -231,6 +248,7 @@ function finish()
 	}
 	else if (command == "Thanos Snap")
 	{
+		
 		var groupElement = $("#userGroups")[0];
 		var selectedElement = groupElement[groupElement.selectedIndex]
 		var groupName = selectedElement.innerHTML;
@@ -296,6 +314,22 @@ function finish()
 		
 		snappedUsers = snappedPeople;
 		
-		socket.emit("thanosSnap", socketData);
+		$("#groupFrame")[0].style.display = "none";
+		$("#hello-holder")[0].style.display = "none";
+		
+		var screen = $("#blockScreen")[0];
+		screen.style.display = "inline-block";
+		var i = 0;
+		var aa = setInterval(function()
+		{
+			screen.style.opacity = i;
+			i = i + .02;
+			if (i >= 1)
+			{
+				socket.emit("thanosSnap", socketData);
+				window.clearInterval(aa);
+			}
+		}, 4);
+		
 	}
 }
